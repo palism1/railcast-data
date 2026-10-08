@@ -1,8 +1,8 @@
 # FILE MAP
 #   purpose: every 5 minutes, fetch MTA + NJT GTFS-RT with palism1/railcast and commit the snapshot
 #   sections:
-#     L8-22  Triggers
-#     L24-90  Job
+#     L8-24  Triggers
+#     L26-92  Job
 # END FILE MAP
 
 # == Triggers ==
@@ -14,7 +14,9 @@ on:
         description: "Fetch and report, but commit nothing"
         type: boolean
         default: true
-  # schedule is added after the first clean dry run (railcast docs/decisions.md D1).
+  # TWEAK: 5 minutes is GitHub's floor; runs often start a few minutes late.
+  schedule:
+    - cron: "*/5 * * * *"
 
 # DO NOT TOUCH: runs must never overlap, or two pushes race on the same files.
 concurrency:
