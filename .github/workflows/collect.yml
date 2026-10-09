@@ -2,7 +2,7 @@
 #   purpose: every 5 minutes, fetch MTA + NJT GTFS-RT with palism1/railcast and commit the snapshot
 #   sections:
 #     L8-24  Triggers
-#     L26-92  Job
+#     L26-94  Job
 # END FILE MAP
 
 # == Triggers ==
@@ -78,7 +78,9 @@ jobs:
         run: |
           git config user.name "railcast-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add raw parquet logs static 2>/dev/null || true
+          # -A . (not a path list): a missing path, e.g. no parquet when every feed is down,
+          # would make git add fail and drop that run's uptime rows.
+          git add -A .
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
           git commit -q -m "snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3 4; do
