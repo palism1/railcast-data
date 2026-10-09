@@ -1,8 +1,8 @@
 # FILE MAP
 #   purpose: every 5 minutes, fetch MTA + NJT GTFS-RT with palism1/railcast and commit the snapshot
 #   sections:
-#     L8-24  Triggers
-#     L26-94  Job
+#     L8-26  Triggers
+#     L28-131  Job
 # END FILE MAP
 
 # == Triggers ==
@@ -14,9 +14,11 @@ on:
         description: "Fetch and report, but commit nothing"
         type: boolean
         default: true
-  # TWEAK: 5 minutes is GitHub's floor; runs often start a few minutes late.
+  # Backup only. GitHub's scheduler can skip runs for hours, so a real run collects every
+  # 5 minutes for about an hour and then dispatches the next run itself (see Collect).
+  # This cron restarts the chain if a dispatch is ever lost.
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "13,43 * * * *"
 
 # DO NOT TOUCH: runs must never overlap, or two pushes race on the same files.
 concurrency:
@@ -26,13 +28,17 @@ concurrency:
 # == Job ==
 permissions:
   contents: write
+  actions: write # the run dispatches its successor
 
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 75
     env:
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      # TWEAK: 12 collections, 5 minutes apart, then hand over to the next run.
+      LOOP_COUNT: 12
+      LOOP_SECONDS: 300
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,8 +69,44 @@ jobs:
           NJT_USERNAME: ${{ secrets.NJT_USERNAME }}
           NJT_PASSWORD: ${{ secrets.NJT_PASSWORD }}
         run: |
-          uv run --project code --no-dev railcast-collect --out . --njt-cache .njt-cache/token.bin \
-            $([ "$DRY_RUN" = "true" ] && echo --dry-run)
+          collect() {
+            uv run --project code --no-dev railcast-collect --out . --njt-cache .njt-cache/token.bin "$@"
+          }
+          commit() {
+            git add -A .
+            git diff --cached --quiet && { echo "nothing to commit"; return 0; }
+            git commit -q -m "snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+            for i in 1 2 3 4; do
+              git push -q && return 0
+              sleep $((2 ** i)); git pull -q --rebase
+            done
+            return 1
+          }
+          if [ "$DRY_RUN" = "true" ]; then
+            collect --dry-run
+            exit 0
+          fi
+
+          git config user.name "railcast-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Each pass writes its own outputs; keep "any pass" for both flags.
+          cache_changed=false; any_all_failed=false; push_failed=0
+          start=$(date +%s)
+          for n in $(seq 0 $((LOOP_COUNT - 1))); do
+            wait=$((start + n * LOOP_SECONDS - $(date +%s)))
+            [ "$wait" -gt 0 ] && sleep "$wait"
+            echo "::group::collect $((n + 1))/$LOOP_COUNT"
+            out=$(mktemp)
+            # A failed pass is logged and the loop carries on; uptime rows record the outage.
+            GITHUB_OUTPUT=$out collect || echo "::warning::collector exited non-zero"
+            grep -q '^njt_cache_changed=true' "$out" && cache_changed=true
+            grep -q '^all_failed=true' "$out" && any_all_failed=true
+            commit || { push_failed=$((push_failed + 1)); echo "::warning::push failed"; }
+            echo "::endgroup::"
+          done
+          echo "njt_cache_changed=$cache_changed" >> "$GITHUB_OUTPUT"
+          echo "all_failed=$any_all_failed" >> "$GITHUB_OUTPUT"
+          echo "push_failed=$push_failed" >> "$GITHUB_OUTPUT"
 
       - name: Save NJT token cache
         if: steps.collect.outputs.njt_cache_changed == 'true'
@@ -73,22 +115,17 @@ jobs:
           path: .njt-cache
           key: njt-token-${{ github.run_id }}
 
-      - name: Commit snapshot
-        if: env.DRY_RUN != 'true'
-        run: |
-          git config user.name "railcast-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # -A . (not a path list): a missing path, e.g. no parquet when every feed is down,
-          # would make git add fail and drop that run's uptime rows.
-          git add -A .
-          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
-          git commit -q -m "snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
-          for i in 1 2 3 4; do
-            git push -q && exit 0
-            sleep $((2 ** i)); git pull -q --rebase
-          done
-          exit 1
+      # Not on cancel, so cancelling a run (or disabling the workflow) stops the chain.
+      - name: Dispatch the next run
+        if: (success() || failure()) && env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run collect.yml --repo "$GITHUB_REPOSITORY" --ref main -f dry_run=false
 
       - name: Fail if every feed failed
         if: steps.collect.outputs.all_failed == 'true'
-        run: echo "::error::every attempted feed failed this run" && exit 1
+        run: echo "::error::every attempted feed failed in at least one pass" && exit 1
+
+      - name: Fail if a push failed
+        if: steps.collect.outputs.push_failed != '0' && steps.collect.outputs.push_failed != ''
+        run: echo "::error::${{ steps.collect.outputs.push_failed }} snapshot push(es) failed" && exit 1
