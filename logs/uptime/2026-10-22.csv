@@ -1,0 +1,12 @@
+run_started_at,cron_lag_s,agency,feed,status,http_status,bytes,latency_ms,feed_ts,feed_age_s,entities,error,raw_stored
+2026-10-22T00:50:12Z,12,mta,mta-1234567s,ok,200,193663,172,1792630208,4,409,,1
+2026-10-22T00:50:12Z,12,mta,mta-ace,ok,200,90311,67,1792630208,4,208,,1
+2026-10-22T00:50:12Z,12,mta,mta-bdfm,ok,200,114845,44,1792630208,4,248,,1
+2026-10-22T00:50:12Z,12,mta,mta-g,ok,200,17356,54,1792630207,5,44,,1
+2026-10-22T00:50:12Z,12,mta,mta-jz,ok,200,21530,42,1792630205,7,42,,1
+2026-10-22T00:50:12Z,12,mta,mta-nqrw,ok,200,103135,43,1792630205,7,192,,1
+2026-10-22T00:50:12Z,12,mta,mta-l,ok,200,30524,42,1792630212,0,54,,1
+2026-10-22T00:50:12Z,12,mta,mta-si,ok,200,5682,36,1792630208,4,16,,1
+2026-10-22T00:50:12Z,12,mta,mta-alerts,ok,200,501388,51,1792630204,9,209,,1
+2026-10-22T00:50:12Z,12,njt,njt-rail,skipped,,0,0,,,0,no NJT credentials,0
+2026-10-22T00:50:12Z,12,njt,njt-alerts,skipped,,0,0,,,0,no NJT credentials,0
