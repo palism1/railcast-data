@@ -10,3 +10,14 @@ run_started_at,cron_lag_s,agency,feed,status,http_status,bytes,latency_ms,feed_t
 2026-11-13T01:02:07Z,127,mta,mta-alerts,ok,200,553976,269,1794531130,599,230,,1
 2026-11-13T01:02:07Z,127,njt,njt-rail,skipped,,0,0,,,0,no NJT credentials,0
 2026-11-13T01:02:07Z,127,njt,njt-alerts,skipped,,0,0,,,0,no NJT credentials,0
+2026-11-13T07:47:11Z,131,mta,mta-1234567s,ok,200,54705,93,1794556027,4,124,,1
+2026-11-13T07:47:11Z,131,mta,mta-ace,ok,200,41215,38,1794556019,12,90,,1
+2026-11-13T07:47:11Z,131,mta,mta-bdfm,ok,200,53201,46,1794556025,6,120,,1
+2026-11-13T07:47:11Z,131,mta,mta-g,ok,200,6417,62,1794556025,6,16,,1
+2026-11-13T07:47:11Z,131,mta,mta-jz,ok,200,11973,41,1794556024,7,24,,1
+2026-11-13T07:47:11Z,131,mta,mta-nqrw,ok,200,41256,44,1794556025,6,86,,1
+2026-11-13T07:47:11Z,131,mta,mta-l,ok,200,7984,44,1794556027,4,15,,1
+2026-11-13T07:47:11Z,131,mta,mta-si,ok,200,5820,35,1794556029,2,16,,1
+2026-11-13T07:47:11Z,131,mta,mta-alerts,ok,200,549680,75,1794555709,322,231,,1
+2026-11-13T07:47:11Z,131,njt,njt-rail,skipped,,0,0,,,0,no NJT credentials,0
+2026-11-13T07:47:11Z,131,njt,njt-alerts,skipped,,0,0,,,0,no NJT credentials,0
